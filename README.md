@@ -1,7 +1,7 @@
 # PARENT
 Code for [Handling Divergent Reference Texts when Evaluating Table-to-Text Generation](https://arxiv.org/abs/1906.01081).
 
-This largely follows the code given by the google-research team, all credit to them. I simply have rewritten some part to be faster, removed all tensorflow mentions and wraped everything using multiprocessing (shipped with python).
+This largely follows [the code given by the google-research team](https://github.com/google-research/language/tree/master/language/table_text_eval), all credit to them. I simply have rewritten some part to be faster, removed all tensorflow mentions and wraped everything using multiprocessing (shipped with python).
 
 Original code can take up to several minutes to compute scores on the WikiBIO test set. With this implementation, it takes only 10 seconds with 32 cpus.
 
