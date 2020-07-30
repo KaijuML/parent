@@ -3,6 +3,8 @@ Code for [Handling Divergent Reference Texts when Evaluating Table-to-Text Gener
 
 This largely follows the code given by the google-research team, all credit to them. I simply have rewritten some part to be faster, removed all tensorflow mentions and wraped everything using multiprocessing (shipped with python).
 
+Original code can take up to several minutes to compute scores on the WikiBIO test set. With this implementation, it takes only 10 seconds with 32 cpus.
+
 Slight change in functionnality: I have (for now) removed spport for multiple references. This is because I feel this metric is especially usefull on [WikiBIO](https://github.com/DavidGrangier/wikipedia-biography-dataset) and there is only when reference per instance. Support for multiple references could be easily added with a for loop, in method `parent_instance_level`.
 
 
@@ -27,6 +29,10 @@ import json
 
 
 # open all files
+path_to_tables = 'data/wb_test_tables.jl'
+path_to_references = 'data/wb_test_output.txt'
+path_to_predictions = 'data/wb_predictions.txt'
+
 with open(path_to_tables, mode="r", encoding='utf8') as f:
     tables = [json.loads(line) for line in f if line.strip()]
 
