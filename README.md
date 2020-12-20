@@ -5,7 +5,7 @@ This largely follows [the code given by the google-research team](https://github
 
 Original code can take up to several minutes to compute scores on the WikiBIO test set. With this implementation, it takes only 10 seconds with 32 cpus.
 
-Slight change in functionnality: I have (for now) removed spport for multiple references. This is because I feel this metric is especially usefull on [WikiBIO](https://github.com/DavidGrangier/wikipedia-biography-dataset) and there is only when reference per instance. Support for multiple references could be easily added with a for loop, in method `parent_instance_level`.
+Slight change in functionnality: I have (for now) removed support for multiple references. This is because I feel this metric is especially usefull on [WikiBIO](https://github.com/DavidGrangier/wikipedia-biography-dataset) and there is only one reference per instance. Support for multiple references could be easily added with a for loop, in method `parent_instance_level`.
 
 
 ### Computing the PARENT score in command line:
