@@ -5,9 +5,10 @@ This largely follows [the code given by the google-research team](https://github
 
 Original code can take up to several minutes to compute scores on the WikiBIO test set. With this implementation, it takes only 10 seconds with 32 cpus.
 
-EDIT 28-01-2021: I have added support for multiple references. Simply pass a list of files with: `--references <file1> <file2>`. `<file1>` should contain the first reference for all instances (and therefore should have no empty line.) `<file2>` should contain the second reference for all instances (if an instance does not have a second ref, there should be an empty line instead). So on, so forth for `<fileN>`.
+EDIT 28-01-2021: I have added support for multiple references. Simply pass a list of files with: `--references <file1> <file2> ... <fileN>`.  
+`<file1>` should contain the first reference for all instances (and therefore should have no empty line.) `<file2>` should contain the second reference for all instances (if an instance does not have a second ref, there should be an empty line instead). So on, so forth for `<fileN>`.
 
-Note that for simplicity, I make a very simple and naive check to see if multiple instances are passed (see `parent.py:line351-355`). This could easily break in edge-case settings (e.g. when the code is called on files with only one instance).
+Note that for simplicity, I make a very simple and naive check to see if multiple instances are passed (see `parent.py:line347-355`). This could easily break in edge-case settings (e.g. when the code is called on files with only one instance).
 
 
 ### Computing the PARENT score in command line:
