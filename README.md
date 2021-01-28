@@ -5,7 +5,9 @@ This largely follows [the code given by the google-research team](https://github
 
 Original code can take up to several minutes to compute scores on the WikiBIO test set. With this implementation, it takes only 10 seconds with 32 cpus.
 
-Slight change in functionnality: I have (for now) removed support for multiple references. This is because I feel this metric is especially usefull on [WikiBIO](https://github.com/DavidGrangier/wikipedia-biography-dataset) and there is only one reference per instance. Support for multiple references could be easily added with a for loop, in method `parent_instance_level`.
+EDIT 28-01-2021: I have added support for multiple references. Simply pass a list of files with: `--references <file1> <file2>`. `<file1>` should contain the first reference for all instances (and therefore should have no empty line.) `<file2>` should contain the second reference for all instances (if an instance does not have a second ref, there should be an empty line instead). So on, so forth for `<fileN>`.
+
+Note that for simplicity, I make a very simple and naive check to see if multiple instances are passed (see `parent.py:line351-355`). This could easily break in edge-case settings (e.g. when the code is called on files with only one instance).
 
 
 ### Computing the PARENT score in command line:
@@ -13,6 +15,14 @@ Slight change in functionnality: I have (for now) removed support for multiple r
 If you want out-of-the-box usage, simply use:
 
 ```python parent.py --predictions $PREDICTION_PATH --references $REFERENCES_PATH --tables $TABLES_PATH --avg_results```
+
+With the example files provided in `data`, and using `--n_jobs 32`, this should take around 8 secondes and print:
+
+```
+PARENT-precision: - - - 0.797
+PARENT-recall:  - - - - 0.45
+PARENT-fscore:  - - - - 0.553
+```
 
 Note that predictions/references should be one sentence per line (whitespace is used to tokenize sentences).
 
@@ -36,10 +46,10 @@ path_to_predictions = 'data/wb_predictions.txt'
 with open(path_to_tables, mode="r", encoding='utf8') as f:
     tables = [json.loads(line) for line in f if line.strip()]
 
-with open(path_references, mode="r", encoding='utf8') as f:
+with open(path_to_references, mode="r", encoding='utf8') as f:
     references = [line.strip().split() for line in f if line.strip()]
 
-with open(path_to_predictions', mode="r", encoding='utf8') as f:
+with open(path_to_predictions, mode="r", encoding='utf8') as f:
     predictions = [line.strip().split() for line in f if line.strip()]
         
 precisions, recalls, f_scores = parent(
@@ -47,6 +57,7 @@ precisions, recalls, f_scores = parent(
     references,
     tables,
     avg_results=True,
-    n_jobs=32
+    n_jobs=32,
+    use_tqdm='notebook'
 )
 ```

@@ -6,6 +6,7 @@
 """Script to compute PARENT metric."""
 from functools import partial
 
+import tqdm.notebook as tqdm_notebook
 import multiprocessing as mp
 import numpy as np
 import collections
@@ -152,104 +153,112 @@ def parent_instance_level(package,
                           max_order=4,
                           entailment_fn=overlap_probability,
                           mention_fn=_mention_probability):
+    """
+    In the case of multiple references, score is the max among references.
+    """
     
-    prediction, reference, table = package  # unpacking
+    prediction, references, table = package  # unpacking
     
-    # Weighted ngram precisions and recalls for each order.
-    ngram_prec, ngram_rec = list(), list()
-    for order in range(1, max_order + 1):
-        # Collect n-grams and their entailment probabilities.
-        pred_ngram_counts = _ngram_counts(prediction, order)
-        pred_ngram_weights = {ngram: entailment_fn(ngram, table)
-                              for ngram in pred_ngram_counts}
-        ref_ngram_counts = _ngram_counts(reference, order)
-        ref_ngram_weights = {ngram: entailment_fn(ngram, table)
-                             for ngram in ref_ngram_counts}
-
-        # Precision.
-        numerator, denominator = 0., 0.
-        for ngram, count in pred_ngram_counts.items():
-            denominator += count
-            prob_ngram_in_ref = min(
-                1., float(ref_ngram_counts.get(ngram, 0) / count))
-            numerator += count * (
-                prob_ngram_in_ref +
-                (1. - prob_ngram_in_ref) * pred_ngram_weights[ngram])
-        if denominator == 0.:
-            # Set precision to 0.
-            ngram_prec.append(0.0)
-        else:
-            ngram_prec.append(numerator / denominator)
-
-        # Recall.
-        numerator, denominator = 0., 0.
-        for ngram, count in ref_ngram_counts.items():
-            prob_ngram_in_pred = min(
-                1., float(pred_ngram_counts.get(ngram, 0) / count))
-            denominator += count * ref_ngram_weights[ngram]
-            numerator += count * ref_ngram_weights[ngram] * prob_ngram_in_pred
-        if denominator == 0.:
-            # Set recall to 1.
-            ngram_rec.append(1.0)
-        else:
-            ngram_rec.append(numerator / denominator)
-
-    # Compute recall against table fields.
+    # Compute recall against table fields (it doesn't depend on the ref).
     table_mention_probs = [mention_fn(entry, prediction)
                      for entry in table]
-    table_rec = sum(table_mention_probs) / len(table)
-
-    # Smoothing.
-    for order in range(1, max_order):
-        if ngram_prec[order] == 0.:
-            ngram_prec[order] = smoothing
-        if ngram_rec[order] == 0.:
-            ngram_rec[order] = smoothing
-
-    # Compute geometric averages of precision and recall for all orders.
-    w = 1. / max_order
-    if any(prec == 0. for prec in ngram_prec):
-        c_prec = 0
-    else:
-        sp = (w * math.log(p_i) for p_i in ngram_prec)
-        c_prec = math.exp(math.fsum(sp))
-    if any(rec == 0. for rec in ngram_rec):
-        ref_rec = smoothing
-    else:
-        sr = [w * math.log(r_i) for r_i in ngram_rec]
-        ref_rec = math.exp(math.fsum(sr))
-
-    # Combine reference and table recalls.
-    if table_rec == 0.:
-        table_rec = smoothing
-    if ref_rec == 0. or table_rec == 0.:
-        c_rec = 0
-    else:
-        if lambda_weight is None:
-            lw = sum([mention_fn(entry, reference) for entry in table
-           ]) / len(table)
-            lw = 1. - lw
-        else:
-            lw = lambda_weight
-
-        c_rec = math.exp((1. - lw) * math.log(ref_rec) + (lw) * math.log(table_rec))
-
-    # F-score.
-    c_f = (2. * c_prec * c_rec) / (c_prec + c_rec + 1e-8)
+    table_rec = sum(table_mention_probs) / len(table) or smoothing
     
-    return c_prec, c_rec, c_f
+    multi_c_prec, multi_c_rec, multi_c_f = list(), list(), list()
+    
+    for reference in references:
+        # Weighted ngram precisions and recalls for each order.
+        ngram_prec, ngram_rec = list(), list()
+        for order in range(1, max_order + 1):
+            # Collect n-grams and their entailment probabilities.
+            pred_ngram_counts = _ngram_counts(prediction, order)
+            pred_ngram_weights = {ngram: entailment_fn(ngram, table)
+                                  for ngram in pred_ngram_counts}
+            ref_ngram_counts = _ngram_counts(reference, order)
+            ref_ngram_weights = {ngram: entailment_fn(ngram, table)
+                                 for ngram in ref_ngram_counts}
+
+            # Precision.
+            numerator, denominator = 0., 0.
+            for ngram, count in pred_ngram_counts.items():
+                denominator += count
+                prob_ngram_in_ref = min(
+                    1., float(ref_ngram_counts.get(ngram, 0) / count))
+                numerator += count * (
+                    prob_ngram_in_ref +
+                    (1. - prob_ngram_in_ref) * pred_ngram_weights[ngram])
+            if denominator == 0.:
+                # Set precision to 0.
+                ngram_prec.append(0.0)
+            else:
+                ngram_prec.append(numerator / denominator)
+
+            # Recall.
+            numerator, denominator = 0., 0.
+            for ngram, count in ref_ngram_counts.items():
+                prob_ngram_in_pred = min(
+                    1., float(pred_ngram_counts.get(ngram, 0) / count))
+                denominator += count * ref_ngram_weights[ngram]
+                numerator += count * ref_ngram_weights[ngram] * prob_ngram_in_pred
+            if denominator == 0.:
+                # Set recall to 1.
+                ngram_rec.append(1.0)
+            else:
+                ngram_rec.append(numerator / denominator)
+
+        # Smoothing.
+        for order in range(1, max_order):
+            if ngram_prec[order] == 0.:
+                ngram_prec[order] = smoothing
+            if ngram_rec[order] == 0.:
+                ngram_rec[order] = smoothing
+
+        # Compute geometric averages of precision and recall for all orders.
+        w = 1. / max_order
+        if any(prec == 0. for prec in ngram_prec):
+            c_prec = 0
+        else:
+            sp = (w * math.log(p_i) for p_i in ngram_prec)
+            c_prec = math.exp(math.fsum(sp))
+        if any(rec == 0. for rec in ngram_rec):
+            ref_rec = smoothing
+        else:
+            sr = [w * math.log(r_i) for r_i in ngram_rec]
+            ref_rec = math.exp(math.fsum(sr))
+            
+        # Combine reference and table recalls.
+        if ref_rec == 0. or table_rec == 0.:
+            c_rec = 0
+        else:
+            if lambda_weight is None:
+                lw = sum([mention_fn(entry, reference) for entry in table
+               ]) / len(table)
+                lw = 1. - lw
+            else:
+                lw = lambda_weight
+
+            c_rec = math.exp((1. - lw) * math.log(ref_rec) + (lw) * math.log(table_rec))
+
+        # F-score.
+        c_f = (2. * c_prec * c_rec) / (c_prec + c_rec + 1e-8)
+        
+        multi_c_prec.append(c_prec)
+        multi_c_rec.append(c_rec)
+        multi_c_f.append(c_f)
+           
+    return max(multi_c_prec), max(multi_c_rec), max(multi_c_f)
 
 
 def _parent(predictions,
-           references,
-           tables,
-           lambda_weight=0.5,
-           smoothing=0.00001,
-           max_order=4,
-           entailment_fn=overlap_probability,
-           mention_fn=_mention_probability,
-           n_jobs=-1,
-           use_tqdm=True):
+            references,
+            tables,
+            lambda_weight=0.5,
+            smoothing=0.00001,
+            max_order=4,
+            entailment_fn=overlap_probability,
+            mention_fn=_mention_probability,
+            n_jobs=-1,
+            use_tqdm=True):
     """
     Metric for comparing predictions to references given tables.
     Upgrade from original version (see first line of this file):
@@ -278,8 +287,10 @@ def _parent(predictions,
                 match that of `_mention_probability` above.
     n_jobs: An int to specify number of parallel workers. 
             -1 to use all available.
-    use_tqdm: A boolean to specify whether or not to use tqm. 
+    use_tqdm: A boolean or str to specify whether or not to use tqm.
               Usefull to deactivate when using the function in a notebook.
+              if str, use either 'classic' or 'notebook'. If boolean, defaults
+              to classic
 
     RETURNS:
     precision: Average precision of all predictions.
@@ -288,7 +299,11 @@ def _parent(predictions,
     all_f_scores: List of all F-scores for each item.
     """
     # sanity check
-    validate_parent_args(lambda_weight, smoothing, max_order)
+    references, _tqdm = validate_parent_args(predictions, references, tables,
+                                             lambda_weight, smoothing, max_order,
+                                             use_tqdm)
+    
+    print(_tqdm)
     
     precisions, recalls, all_f_scores = list(), list(), list()
     
@@ -308,8 +323,8 @@ def _parent(predictions,
             chunksize=n_jobs  # empirically seems to be the best, could be wrong though
         )
 
-        if use_tqdm:
-            for p, r, f in tqdm.tqdm(
+        if _tqdm is not None:
+            for p, r, f in _tqdm.tqdm(
                     _iterable, total=len(tables), desc='Computing PARENT'):
                 precisions.append(p)
                 recalls.append(r)
@@ -324,7 +339,21 @@ def _parent(predictions,
     return precisions, recalls, all_f_scores
 
 
-def validate_parent_args(lambda_weight, smoothing, max_order):
+def validate_parent_args(predictions, references, tables,
+                         lambda_weight, smoothing, max_order, 
+                         use_tqdm):
+    assert len(predictions) == len(tables)
+    
+    # handle multi-references. Also handle empty line at end of file.
+    if len(predictions) != len(references[:len(predictions)]):
+        # Transposing references so that references[idx] contains all refs
+        # for predictions[idx].
+        references = [[r for r in refs if r] for refs in zip(*references)]
+    else:
+        references = [[ref] for ref in references]
+    references = references[:len(predictions)]  # remove empty line at eof
+    assert all(len(refs)>=1 for refs in references)  # check for empty refs
+    
     assert isinstance(lambda_weight, float)
     assert 0 <= lambda_weight <= 1
     
@@ -332,6 +361,18 @@ def validate_parent_args(lambda_weight, smoothing, max_order):
     
     assert isinstance(max_order, int)
     assert max_order > 0
+    
+    if isinstance(use_tqdm, bool):
+        _tqdm = tqdm if use_tqdm else None
+    if isinstance(use_tqdm, str):
+        if use_tqdm == 'classic':
+            _tqdm = tqdm
+        elif use_tqdm == 'notebook':
+            _tqdm = tqdm_notebook
+        else:
+            raise ValueError('use_tqdm should be in [classic|notebook].'
+                             f'Was given <{use_tqdm}>.')
+    return references, _tqdm
 
 
 def parent(predictions,
@@ -413,11 +454,12 @@ if __name__ == '__main__':
     group.add_argument('--tables', '-t', dest='tables',
                         help='path to tables file. Should be a json-line file, '
                              'with one json-encoded table per line')
-    group.add_argument('--references', '-r', dest='references',
-                        help='path to references file')
+    group.add_argument('--references', '-r', dest='references', nargs='+',
+                        help='path to references file. In case of multiple '\
+                             'references, files should have the same number of'\
+                             ' lines, empty line means no reference.'),
     group.add_argument('--dest', dest='dest', default=None,
-                       help="If not averaging results, "
-                            "write the results to this file")
+                       help="write the results to this file")
     
     group = parser.add_argument_group('Arguments regarding PARENT')
     group.add_argument('--lambda_weight', dest='lambda_weight', type=float,
@@ -433,8 +475,9 @@ if __name__ == '__main__':
     group = parser.add_argument_group('Arguments regarding multiprocessing')
     group.add_argument('--n_jobs', dest='n_jobs', type=int, default=-1,
                         help='number of processes to use. <0 for cpu_count()')
-    group.add_argument('--do_not_use_tqdm', dest='do_not_use_tqdm', 
-                       action='store_true', help='Do not use tqdm.')
+    group.add_argument('--tqdm', dest='tqdm', default='True',
+                       choices=['True', 'False', 'classic', 'notebook'],
+                       help='Which tqdm to use.')
     
     args = parser.parse_args()
     
@@ -442,16 +485,26 @@ if __name__ == '__main__':
         assert args.dest is not None, "Please specify where you want to keep results!"
         assert not os.path.exists(args.dest), "destination file already exists!"
         
+    if args.dest is not None:
+        folderpath, filename = os.path.split(args.dest)
+        os.makedirs(folderpath)
+        
+    if args.tqdm == 'True': args.tqdm = True
+    if args.tqdm == 'False': args.tqdm = False
+        
     # Opening all files
-    print('Opening all files, could take a second.')
+    print('Opening all files, could take a moment.')
     with open(args.predictions, mode="r", encoding='utf8') as f:
         predictions = [line.strip().split() for line in f if line.strip()]
         
     with open(args.tables, mode="r", encoding='utf8') as f:
         tables = [json.loads(line) for line in f if line.strip()]
 
-    with open(args.references, mode="r", encoding='utf8') as f:
-        references = [line.strip().split() for line in f if line.strip()]
+    # args.references is a list of files
+    references = list()
+    for filename in args.references:
+        with open(filename, mode="r", encoding='utf8') as f:
+            references.append([line.strip().split() for line in f])
         
     precisions, recalls, f_scores = parent(
         predictions,
@@ -462,7 +515,7 @@ if __name__ == '__main__':
         max_order=args.max_order,
         avg_results=args.avg_results,
         n_jobs=args.n_jobs,
-        use_tqdm=not args.do_not_use_tqdm)
+        use_tqdm=args.tqdm)
     
     if args.avg_results:
         print(
@@ -471,7 +524,7 @@ if __name__ == '__main__':
             f'PARENT-fscore:  - - - - {np.round(f_scores, 3)}',
             sep='\n'
         )
-    else:
+    if args.dest is not None:
         with open(args.dest, mode="w", encoding="utf8") as f:
             json.dump({
                 'precisions': precisions,
