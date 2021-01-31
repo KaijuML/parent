@@ -487,7 +487,8 @@ if __name__ == '__main__':
         
     if args.dest is not None:
         folderpath, filename = os.path.split(args.dest)
-        os.makedirs(folderpath)
+        if folderpath and not os.path.exists(folderpath):
+            os.makedirs(folderpath)
         
     if args.tqdm == 'True': args.tqdm = True
     if args.tqdm == 'False': args.tqdm = False
