@@ -303,8 +303,6 @@ def _parent(predictions,
                                              lambda_weight, smoothing, max_order,
                                              use_tqdm)
     
-    print(_tqdm)
-    
     precisions, recalls, all_f_scores = list(), list(), list()
     
     _parent = partial(parent_instance_level, 
@@ -315,7 +313,7 @@ def _parent(predictions,
                       mention_fn=mention_fn)
     
     n_jobs = mp.cpu_count() if n_jobs < 0 else n_jobs
-    print(f'Using {n_jobs} processes, starting now')
+    print(f'Using {n_jobs} processes, starting now.')
     with mp.Pool(processes=n_jobs) as pool:
         _iterable = pool.imap(
             _parent, 
