@@ -24,7 +24,7 @@ Note that for simplicity, I make a very simple and naive check to see if multipl
 
 If you want out-of-the-box usage, simply use:
 
-```python parent.py --predictions $PREDICTION_PATH --references $REFERENCES_PATH --tables $TABLES_PATH --avg_results```
+```parent --predictions $PREDICTION_PATH --references $REFERENCES_PATH --tables $TABLES_PATH --avg_results```
 
 With the example files provided in `data`, and using `--n_jobs 32`, this should take around 8 secondes and print:
 
