@@ -342,14 +342,27 @@ def validate_parent_args(predictions, references, tables,
                          use_tqdm):
     assert len(predictions) == len(tables)
     
-    # handle multi-references. Also handle empty line at end of file.
-    if len(predictions) != len(references[:len(predictions)]):
+    # handling multi-references. Three ways to give refs:
+    #  1) Solo refs, so a list of references
+    #  2) Multi refs, by example [refs_ex1, refs_ex2, ...]
+    #     where refs_exN is the list of refs for ex1
+    #  3) Multi refs, by ref index [refs1, refs2, ...]
+    #    where refsN is the list of all Nth refs (empty line if no refN)
+    if len(predictions) == len(references):
+        # Case 1
+        if isinstance(references[0][0], str):
+            references = [[ref] for ref in references]
+        else:
+            # Case 2
+            pass
+    else:
+        # Case 3
+        # assert same number of examples for each refN
+        assert all(len(r) == len(references[0]) for r in references)
         # Transposing references so that references[idx] contains all refs
         # for predictions[idx].
         references = [[r for r in refs if r] for refs in zip(*references)]
-    else:
-        references = [[ref] for ref in references]
-    references = references[:len(predictions)]  # remove empty line at eof
+        
     assert all(len(refs)>=1 for refs in references)  # check for empty refs
     
     assert isinstance(lambda_weight, float)
