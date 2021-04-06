@@ -5,7 +5,7 @@ This largely follows [the code given by the google-research team](https://github
 
 Original code can take up to several minutes to compute scores on the WikiBIO test set. With this implementation, it takes less than 10 seconds with 32 cpus.
 
-EDIT 06-04-2021: I have package everything so that it can be installed with pip.
+**EDIT 06-04-2021**: I have package everything so that it can be installed with pip.
 That way, you can install the repo once for all your projects. TODO: push to PyPI
 
 ```bash
@@ -20,7 +20,7 @@ I have also included better support for multi references. Now, references can be
 - A list of multiple references, gathered by example. We have `len(references) == len(predictions)` and `references[k]` is a list of references, which are lists of str
 - A list of multiple references, gathered by reference. We have `len(references) == <max_number_of_refs_for_an_example` and `references[k]` is the list of kth references for all examples. If an example has less than k refs, then `references[k][ex] == ''`
 
-EDIT 28-01-2021: I have added support for multiple references. Simply pass a list of files with: `--references <file1> <file2> ... <fileN>`.  
+**EDIT 28-01-2021**: I have added support for multiple references. Simply pass a list of files with: `--references <file1> <file2> ... <fileN>`.  
 `<file1>` should contain the first reference for all instances (and therefore should have no empty line.) `<file2>` should contain the second reference for all instances (if an instance does not have a second ref, there should be an empty line instead). So on, so forth for `<fileN>`.
 
 Note that for simplicity, I make a very simple and naive check to see if multiple instances are passed (see `parent.py:line347-355`). This could easily break in edge-case settings (e.g. when the code is called on files with only one instance).
