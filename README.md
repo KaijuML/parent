@@ -14,6 +14,12 @@ cd parent
 pip install .
 ```
 
+I have also included better support for multi references. Now, references can be:
+
+- A list of single references. We have `len(references) == len(predictions)` and `references[k]` is a list of str
+- A list of multiple references, gathered by example. We have `len(references) == len(predictions)` and `references[k]` is a list of references, which are lists of str
+- A list of multiple references, gathered by reference. We have `len(references) == <max_number_of_refs_for_an_example` and `references[k]` is the list of kth references for all examples. If an example has less than k refs, then `references[k][ex] == ''`
+
 EDIT 28-01-2021: I have added support for multiple references. Simply pass a list of files with: `--references <file1> <file2> ... <fileN>`.  
 `<file1>` should contain the first reference for all instances (and therefore should have no empty line.) `<file2>` should contain the second reference for all instances (if an instance does not have a second ref, there should be an empty line instead). So on, so forth for `<fileN>`.
 
@@ -66,7 +72,7 @@ with open(path_to_references, mode="r", encoding='utf8') as f:
 with open(path_to_predictions, mode="r", encoding='utf8') as f:
     predictions = [line.strip().split() for line in f if line.strip()]
         
-precisions, recalls, f_scores = parent(
+precision, recall, f_score = parent(
     predictions,
     references,
     tables,
