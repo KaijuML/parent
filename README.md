@@ -5,6 +5,15 @@ This largely follows [the code given by the google-research team](https://github
 
 Original code can take up to several minutes to compute scores on the WikiBIO test set. With this implementation, it takes less than 10 seconds with 32 cpus.
 
+EDIT 06-04-2021: I have package everything so that it can be installed with pip.
+That way, you can install the repo once for all your projects. TODO: push to PyPI
+
+```bash
+git clone https://github.com/KaijuML/parent.git
+cd parent
+pip install .
+```
+
 EDIT 28-01-2021: I have added support for multiple references. Simply pass a list of files with: `--references <file1> <file2> ... <fileN>`.  
 `<file1>` should contain the first reference for all instances (and therefore should have no empty line.) `<file2>` should contain the second reference for all instances (if an instance does not have a second ref, there should be an empty line instead). So on, so forth for `<fileN>`.
 

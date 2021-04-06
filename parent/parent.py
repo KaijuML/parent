@@ -441,8 +441,7 @@ def parent(predictions,
 
     return precisions, recalls, f_scores
 
-
-if __name__ == '__main__':
+def main():
 
     parser = argparse.ArgumentParser()
     
@@ -530,3 +529,8 @@ if __name__ == '__main__':
                 'recalls': recalls,
                 'f_scores': f_scores,
             }, f)
+
+            
+
+if __name__ == '__main__':
+    main()
