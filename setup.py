@@ -21,7 +21,7 @@ import os
 
 
 PACKAGE_NAME = 'parent'
-VERSION = '1.0'
+VERSION = '1.1.1'
 
 KEYWORDS = ' '.join([
     'parent', 'metric', 'evaluation', 'data-to-text', 'nlg', 'ngram'
