@@ -313,7 +313,8 @@ def _parent(predictions,
                       mention_fn=mention_fn)
     
     n_jobs = mp.cpu_count() if n_jobs < 0 else n_jobs
-    print(f'Using {n_jobs} processes, starting now.')
+    if _tqdm is not None:
+        print(f'Using {n_jobs} processes, starting now.')
     with mp.Pool(processes=n_jobs) as pool:
         _iterable = pool.imap(
             _parent, 
